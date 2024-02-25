@@ -15,80 +15,120 @@ function PatientsRecord() {
   const [patientDetails, setPatientDetails] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const q = query(
-            collection(db, "patient"),
-            where("uid", "==", user.uid)
-          );
-          const querySnapshot = await getDocs(q);
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        const q = query(
+          collection(db, "patient"),
+          where("uid", "==", user.uid)
+        );
+        const querySnapshot = await getDocs(q);
 
-          if (!querySnapshot.empty) {
-            const userData = querySnapshot.docs[0].data();
-            setUserDetails(userData);
-            fetchPatientDetails(userData.referenceId);
-          } else {
-            console.error("No user data found in patient collection.");
-          }
-        } catch (error) {
-          console.error("Error fetching user details:", error.message);
+        if (!querySnapshot.empty) {
+          const userData = querySnapshot.docs[0].data();
+          setUserDetails(userData);
+          const referenceId = userData.referenceId;
+          fetchPatientDetails(referenceId);
+        } else {
+          console.error("No user data found in patient collection.");
         }
-      } else {
-        setUserDetails(null);
-        setPatientDetails(null);
+      } catch (error) {
+        console.error("Error fetching user details:", error.message);
       }
-    });
+    } else {
+      setUserDetails(null);
+      setPatientDetails(null);
+    }
+  });
 
-    return () => unsubscribe();
-  }, []);
+  return () => unsubscribe();
+}, []);
 
-  const fetchPatientDetails = async (referenceId) => {
-    try {
-      const q = query(
-        collection(db, "patientRecords"),
-        where("referenceId", "==", referenceId)
+const fetchPatientDetails = async (reference) => {
+  try {
+    const patientsCollection = collection(db, "patients"); // Collection for patients
+    const patientQuery = query(
+      patientsCollection,
+      where("reference", "==", reference)
+    );
+    const patientQuerySnapshot = await getDocs(patientQuery);
+
+    if (!patientQuerySnapshot.empty) {
+      const patientData = patientQuerySnapshot.docs[0].data();
+      setPatientDetails(patientData);
+    } else {
+      // If patient not found in patients collection, try fetching from patientRecords collection
+      const patientRecordsCollection = collection(db, "patientRecords");
+      const patientRecordsQuery = query(
+        patientRecordsCollection,
+        where("reference", "==", reference)
       );
-      const querySnapshot = await getDocs(q);
+      const patientRecordsSnapshot = await getDocs(patientRecordsQuery);
 
-      if (!querySnapshot.empty) {
-        const patientData = querySnapshot.docs[0].data();
+      if (!patientRecordsSnapshot.empty) {
+        const patientData = patientRecordsSnapshot.docs[0].data();
         setPatientDetails(patientData);
       } else {
         console.error("No patient data found in patientRecords collection.");
       }
-    } catch (error) {
-      console.error("Error fetching patient details:", error.message);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching patient details:", error.message);
+  }
+};
+
+
 
   const columns = [
     {
       title: "Name",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "patientName",
+      key: "patientName",
+    },
+    {title: "Reference ID",
+      dataIndex: "reference",
+      key: "reference",
     },
     {
-      title: "Reference ID",
-      dataIndex: "referenceId",
-      key: "referenceId",
+      title: "Assigned Doctor",
+      dataIndex: "assignedDoctor",
+      key: "assignedDoctor",
+    },
+    {
+      title: "Medical History",
+      dataIndex: "medicalHistory",
+      key: "medicalHistory",
+    },
+    {
+      title: "Previous Diagnoses",
+      dataIndex: "previousDiagnoses",
+      key: "previousDiagnoses",
+    },
+    {
+      title: "Medications Prescribed Previously",
+      dataIndex: "medicationsPrescribed",
+      key: "medicationsPrescribed",
+    },
+    {
+      title: "Allergies",
+      dataIndex: "allergies",
+      key: "allergies",
+    },
+    {
+      title: "Previous Surgeries or Treatments",
+      dataIndex: "surgeriesTreatment",
+      key: "surgeriesTreatment",
+    },
+    {
+      title: "Family Medical History",
+      dataIndex: "familyMedicalHistory",
+      key: "familyMedicalHistory",
     },
     // Add more columns as needed based on user details structure
   ];
-  
 
   return (
     <div className="overflow-auto max-h-screen p-4">
-      <h2>User Details</h2>
-
-      {userDetails && (
-        <Table
-          dataSource={[userDetails]} // Pass userDetails as an array with single element
-          columns={columns}
-          rowKey={(record) => record.uid} // Assuming uid is unique
-        />
-      )}
-
       <h2>Patient Details</h2>
 
       {patientDetails && (
